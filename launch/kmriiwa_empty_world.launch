@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Add Gazebo model path -->
+  <env name="GAZEBO_MODEL_PATH" value="$(find smartlab_models)/models" />
+  
+  <!-- Launch KMR iiwa -->
+  <!-- below copied from kmriiwa_ros_stack/kmriiwa_gazebo/kmriiwa_empty_world --> 
+  <arg name="robot_name" default="kmriiwa" />
+  <arg name="hardware_interface" default="PositionJointInterface"/>
+  <arg name="controllers" default="joint_state_controller manipulator_controller endeffector_controller"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="debug" default="false"/>
+  <arg name="verbose" default="false"/>
+  <arg name="paused" default="true" />
+  <arg name="headless" default="false" />
+
+  <!-- start Gazebo with an empty world -->
+  <include file="$(find kmriiwa_dt)/launch/empty_world_no_tf.launch">
+    <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+    <arg name="debug" value="$(arg debug)"/>
+    <arg name="verbose" value="$(arg verbose)" />
+    <arg name="paused" value="$(arg paused)" />
+    <arg name="headless" value="$(arg headless)" />
+  </include>
+  
+  <!-- spawn the robot -->
+  <group ns="$(arg robot_name)">
+    <include file="$(find kmriiwa_gazebo)/launch/includes/robot.launch.xml">
+      <arg name="robot_name" value="$(arg robot_name)" />
+      <arg name="hardware_interface" value="$(arg hardware_interface)"/>
+    </include>
+
+    <!-- spawn the controllers -->
+    <!-- <group ns="arm">  -->
+    <include file="$(find kmriiwa_gazebo)/launch/includes/kmriiwa_gazebo_control.launch">
+      <arg name="robot_name" value="$(arg robot_name)" />
+      <arg name="controllers" value="$(arg controllers)"/>
+      <arg name="hardware_interface" value="$(arg hardware_interface)"/>
+    </include>
+    <!-- </group> -->
+  </group>
+
+  <!-- Launch planning -->
+  <include file="$(find kmriiwa_bringup)/launch/planning_stack_bringup.launch">
+    <arg name="no_static_map" value="false"/> <!-- change this programmatically! -->
+  </include>
+
+  <!-- Update MoveIt planning scene based on Gazebo model states -->
+  <node name="gazebo_moveit_scene_publisher" pkg="kmriiwa_dt" type="gazebo_moveit_scene_publisher.py" output="screen" required="true"/>
+
+  <!-- Kill undesired nodes -->
+  <node name="kill_nodes" pkg="kmriiwa_dt" type="kill_nodes.sh" />
+
+  <!-- Publish static TCP frame --> 
+  <node pkg="tf" type="static_transform_publisher" name="tcp_bcaster" args="0 0 0.140 0 0 0 1 kmriiwa_link_ee kmriiwa_tcp 100" />
+
+  <!-- Forward Gazebo frames to tf -->
+  <node name="gazebo_tf_publisher" pkg="kmriiwa_dt" type="gazebo_tf_publisher.py" output="screen"/>
+
+  <!-- Enable fake grasping -->
+  <node name="grasp_faker" pkg="kmriiwa_dt" type="grasp_faker.py" output="screen" respawn="true"/>
+
+  <!-- Publish ground truth occupancy map -->
+  <node name="gazebo_occupancy_map_publisher" pkg="kmriiwa_dt" type="gazebo_occupancy_map_publisher.py" output="screen" required="true"/>
+
+  <!-- Perfect odometry -->
+  <!-- Publish base footprint transform based on Gazebo ground truth -->
+  <node name="perfect_odom" pkg="kmriiwa_dt" type="perfect_odom.py" output="screen" respawn="true"/>
+  <!-- Make odom frame coincident with map frame -->
+  <node pkg="tf" type="static_transform_publisher" name="odom_gt_bcaster" args="0 0 0 0 0 0 1 map kmriiwa_odom 100" />
+
+</launch>

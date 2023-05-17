@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Add Gazebo model path -->
+  <env name="GAZEBO_MODEL_PATH" value="$(find smartlab_models)/models" />
+  
+  <arg name="id" default="1"/>
+  <arg name="with_robot" default="true"/>
+
+  <arg name="use_sim_time" default="true"/>
+  <arg name="debug" default="false"/>
+  <arg name="verbose" default="false" />
+  <arg name="paused" default="true" />
+  <arg name="headless" default="false" />
+
+  <arg name="world_name" value="$(find kmriiwa_dt)/worlds/environment_$(arg id).world" />
+
+  <group unless="$(arg with_robot)">
+    <!-- start Gazebo with an empty world -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+      <arg name="world_name" value="$(arg world_name)"/>
+      <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+      <arg name="debug" value="$(arg debug)"/>
+      <arg name="verbose" value="$(arg verbose)" />
+      <arg name="paused" value="$(arg paused)" />
+      <arg name="headless" value="$(arg headless)" />
+    </include>
+  </group>
+
+  <group if="$(arg with_robot)">
+    <!-- call tabletop_kmr.launch -->
+    <include file="$(find kmriiwa_dt)/launch/tabletop_kmr.launch">
+      <arg name="world_name" value="$(arg world_name)"/>
+      <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+      <arg name="debug" value="$(arg debug)"/>
+      <arg name="verbose" value="$(arg verbose)" />
+      <arg name="paused" value="$(arg paused)" />
+      <arg name="headless" value="$(arg headless)" />
+    </include>
+  </group>
+
+  
+</launch>
